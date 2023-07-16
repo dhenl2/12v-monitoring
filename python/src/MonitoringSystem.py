@@ -1,3 +1,5 @@
+import time
+
 from loguru import logger
 from datetime import timedelta
 import configparser
@@ -5,7 +7,11 @@ from VoltageSensor import VoltageSensor
 from CurrentSensor import CurrentSensor
 from TempSensor import TempSensor
 import sys
+import paho.mqtt.client as mqtt
+import json
 
+CONFIG_SYSTEM = "System"
+CONFIG_MQTT = "MQTT"
 CONFIG_VOLTAGE_SENSOR = "Voltage Sensor"
 CONFIG_CURRENT_SENSOR= "Current Sensor"
 CONFIG_TEMP_SENSOR = "Temperature Sensor"
@@ -21,6 +27,11 @@ class MonitorSystem:
         self.voltage = None
         self.current = None
         self.temp = None
+
+        self.client = None
+        self.client_topic = None
+        self.send_interval = None
+
         self.initialise()
 
     def initialise(self):
@@ -39,6 +50,7 @@ class MonitorSystem:
             )
         self.logger.info("Initialising Monitoring System...")
 
+        # Initialise sensors
         self.voltage = VoltageSensor(
             channel=int(self.config[CONFIG_VOLTAGE_SENSOR]["AO_channel"]),
             decimal=int(self.config[CONFIG_VOLTAGE_SENSOR]["round"]),
@@ -57,14 +69,37 @@ class MonitorSystem:
             samples=int(self.config[CONFIG_TEMP_SENSOR]["samples"])
         )
 
+        # Initialise MQTT connection to JS WideSky Client
+        self.client = mqtt.Client(
+            client_id=self.config[CONFIG_MQTT]["name"]
+        )
+        self.client_topic = self.config[CONFIG_MQTT]["topic"]
+        self.client.connect(
+            host=self.config[CONFIG_MQTT]["host"],
+            port=int(self.config[CONFIG_MQTT]["port"])
+        )
+
+        # Initialise system variables
+        self.send_interval = float(self.config[CONFIG_SYSTEM]["interval"])
+
     def get_reading(self, log=False):
         if log:
-            self.logger.info(
+            self.logger.debug(
                 f"Voltage: {self.voltage.get_reading()}V\n" +
-                f"Amperage: {self.current.get_reading()}A"
+                f"Amperage: {self.current.get_reading()}A\n" +
+                f"Temperature: {self.temp.get_reading()}°C"
             )
 
         return {
             "voltage": self.voltage.get_reading(),
             "amperage": self.current.get_reading()
         }
+
+    def start(self):
+        self.logger.info(f"Starting historical data transmission at {self.send_interval}s intervals")
+        while True:
+            self.client.publish(
+                self.client_topic,
+                json.dumps(self.get_reading(True))
+            )
+            time.sleep(self.send_interval)
