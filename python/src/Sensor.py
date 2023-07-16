@@ -9,7 +9,10 @@ class AOSensor:
         if raw:
             return self.sensor.value
         else:
-            return self.scale_func(self.sensor.value)
+            if self.scale_func:
+                return self.scale_func(self.sensor.value)
+            else:
+                return self.sensor.value
 
     def get_avg_reading(self, samples=20):
         total = 0

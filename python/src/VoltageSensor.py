@@ -6,14 +6,16 @@ REF_VOLTAGE = 5
 SCALE_CORRECTION = 0.98066914498
 NO_DECIMAL_ROUNDING = 0
 class VoltageSensor:
-    def __init__(self, channel, decimal=NO_DECIMAL_ROUNDING):
+    def __init__(self, channel, decimal=NO_DECIMAL_ROUNDING, samples = 1000):
         """
         Constructor
         :param channel: AO channel to be used.
         :param decimal: Accuracy of the reading by default.
+        :param samples: Number of samples to average for a requested reading.
         """
         self.sensor = AOSensor(channel, self.scale_func)
         self.decimal = decimal      # Number of decimal places
+        self.samples = samples
 
     def scale_func(self, value):
         """
@@ -24,9 +26,11 @@ class VoltageSensor:
         adc_voltage = value * REF_VOLTAGE
         return adc_voltage * ((R1 + R2) / R2) * SCALE_CORRECTION
 
-    def get_reading(self, samples=1000, options=None):
+    def get_reading(self, samples=None, options=None):
         if options is None:
             options = {"round": self.decimal}
+        if samples is None:
+            samples = self.samples
 
         if options["round"] == NO_DECIMAL_ROUNDING:
             # raw value
