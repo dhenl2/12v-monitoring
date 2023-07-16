@@ -2,9 +2,11 @@ from loguru import logger
 from datetime import timedelta
 import configparser
 from VoltageSensor import VoltageSensor
+from CurrentSensor import CurrentSensor
 import sys
 
 CONFIG_VOLTAGE_SENSOR = "Voltage Sensor"
+CONFIG_CURRENT_SENSOR= "Current Sensor"
 CONFIG_LOGGER = "Logger"
 
 class MonitorSystem:
@@ -15,6 +17,7 @@ class MonitorSystem:
         self.config.read(config_file)
 
         self.voltage = None
+        self.current = None
         self.initialise()
 
     def initialise(self):
@@ -37,8 +40,14 @@ class MonitorSystem:
             int(self.config[CONFIG_VOLTAGE_SENSOR]["AO_channel"]),
             int(self.config[CONFIG_VOLTAGE_SENSOR]["round"])
         )
+        self.current = CurrentSensor(
+            int(self.current[CONFIG_CURRENT_SENSOR]["AO_channel"]),
+            float(self.current[CONFIG_CURRENT_SENSOR]["max_amperage"]),
+            float(self.current[CONFIG_CURRENT_SENSOR]["max_voltage"])
+        )
 
     def get_reading(self):
         self.logger.info(
-            f"Voltage: {self.voltage.get_reading()}V"
+            f"Voltage: {self.voltage.get_reading()}V\n" +
+            f"Amperage: {self.current.get_reading()}A"
         )
